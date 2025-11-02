@@ -1,0 +1,11 @@
+[Unit]
+Description=Runs faborg-backup.sh hourly, skips if today has already been uploaded to Borg server
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=10m
+Unit=borgbackup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Faborg Service
+Wants=faborg.timer
+After=network.target
+
+[Service]
+Type=oneshot
+# Run as root so Borg can read all files and snapshots
+User=root
+Group=root
+ExecStart=/usr/local/bin/faborg-backup.sh
+# Ensure a sane PATH
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
