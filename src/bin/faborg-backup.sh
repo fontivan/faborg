@@ -156,7 +156,7 @@ perform_backup() {
         --filter AME \
         --show-rc \
         --exclude-caches \
-        "${REMOTE}::${HOSTNAME_SHORT}-${TIMESTAMP}" \
+        "${REMOTE}::${HOSTNAME_SHORT}-${DATE}" \
         "$root_snap" "$home_snap" \
         --exclude /proc \
         --exclude /sys \
@@ -203,7 +203,7 @@ main() {
     initialize_repo
     ensure_dir "$SNAPSHOT_DIR_ROOT"
 
-    ROOT_SNAP="${SNAPSHOT_DIR_ROOT}/root-${TIMESTAMP}"
+    ROOT_SNAP="${SNAPSHOT_DIR_ROOT}/root-${DATE}"
     create_snapshot / "$ROOT_SNAP"
 
     ROOT_DEV=$(get_btrfs_device /)
@@ -212,10 +212,10 @@ main() {
     if [[ "$ROOT_DEV" != "$HOME_DEV" ]]; then
         SNAPSHOT_DIR_HOME="/home/.snapshots"
         ensure_dir "$SNAPSHOT_DIR_HOME"
-        HOME_SNAP="${SNAPSHOT_DIR_HOME}/home-${TIMESTAMP}"
+        HOME_SNAP="${SNAPSHOT_DIR_HOME}/home-${DATE}"
         create_snapshot /home "$HOME_SNAP"
     else
-        HOME_SNAP="${SNAPSHOT_DIR_ROOT}/home-${TIMESTAMP}"
+        HOME_SNAP="${SNAPSHOT_DIR_ROOT}/home-${DATE}"
         if btrfs subvolume show /home &>/dev/null; then
             create_snapshot /home "$HOME_SNAP"
         else
