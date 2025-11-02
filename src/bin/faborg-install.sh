@@ -94,6 +94,7 @@ install_local_script() {
     log INFO "Installing local backup script..."
     sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-backup.sh" /usr/local/bin/faborg-backup.sh
     sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-mount.sh" /usr/local/bin/faborg-mount.sh
+    sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-halt.sh" /usr/local/bin/faborg-halt.sh
 }
 
 install_systemd() {
