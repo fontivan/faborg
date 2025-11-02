@@ -5,7 +5,7 @@ Description=Runs faborg-backup.sh hourly
 OnCalendar=hourly
 Persistent=true
 RandomizedDelaySec=10m
-Unit=borgbackup.service
+Unit=faborg.service
 
 [Install]
 WantedBy=timers.target
