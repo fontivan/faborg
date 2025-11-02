@@ -7,24 +7,29 @@
 set -euo pipefail
 
 # -------------------------------
-# Logging function
-# -------------------------------
-log() {
-    local level="${1:-INFO}"; shift
-    local msg="${*}"
-    local timestamp
-    timestamp="$(date '+%F %T')"
-    echo "[${timestamp}] [${level}] ${msg}"
-}
-
-# -------------------------------
 # Configuration
 # -------------------------------
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-BORG_SERVER_FILE="/root/.borg_server"
-BORG_KEYFILE="/root/.borg_keyfile"
-ROOT_SSH_DIR="/root/.ssh"
+
 BORG_KEY="${ROOT_SSH_DIR}/borg_ssh_key"
+BORG_KEYFILE="/root/.borg_keyfile"
+BORG_SERVER_FILE="/root/.borg_server"
+LOGFILE="/var/log/faborg.log"
+ROOT_SSH_DIR="/root/.ssh"
+
+# -------------------------------
+# Logging function
+# -------------------------------
+log() {
+    local level="${1:-INFO}"
+    shift
+    local msg="${*}"
+    local timestamp
+    timestamp="$(date '+%F %T')"
+    local line="[${timestamp}] [${level}] ${msg}"
+    # Output to stdout and append to log file
+    echo "$line" | tee -a "$LOGFILE"
+}
 
 # -------------------------------
 # Validate and parse .borg_server

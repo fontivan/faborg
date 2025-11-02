@@ -7,23 +7,26 @@
 set -euo pipefail
 
 # -------------------------------
+# Configuration
+# -------------------------------
+BORG_KEYFILE="/root/.borg_keyfile"
+BORG_SERVER_FILE="/root/.borg_server"
+MOUNT_POINT="/mnt/borg"
+SSH_KEY="/root/.ssh/borg_ssh_key"
+
+# -------------------------------
 # Logging function
 # -------------------------------
 log() {
-    local level="${1:-INFO}"; shift
+    local level="${1:-INFO}"
+    shift
     local msg="${*}"
     local timestamp
     timestamp="$(date '+%F %T')"
-    echo "[${timestamp}] [${level}] ${msg}"
+    local line="[${timestamp}] [${level}] ${msg}"
+    # Output to stdout and append to log file
+    echo "$line" | tee -a "$LOGFILE"
 }
-
-# -------------------------------
-# Configuration
-# -------------------------------
-BORG_SERVER_FILE="/root/.borg_server"
-BORG_KEYFILE="/root/.borg_keyfile"
-SSH_KEY="/root/.ssh/borg_ssh_key"
-MOUNT_POINT="/mnt/borg"
 
 # -------------------------------
 # Validate and parse .borg_server

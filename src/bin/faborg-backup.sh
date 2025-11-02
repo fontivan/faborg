@@ -7,6 +7,20 @@
 set -euo pipefail
 
 # -------------------------------
+# Configuration
+# -------------------------------
+BORG_KEY="/root/.ssh/borg_ssh_key"
+BORG_KEYFILE="/root/.borg_keyfile"
+BORG_SERVER_FILE="/root/.borg_server"
+DATE="$(date +%F)"
+HOSTNAME_SHORT="$(hostname -s)"
+LOCK_FILE_DIR="/etc/faborg"
+LOCK_FILE="/etc/faborg/faborg.lock"
+LOGFILE="/var/log/faborg.log"
+SNAPSHOT_DIR_ROOT="/.snapshots"
+TIMESTAMP="$(date +%F-%H%M%S)"
+
+# -------------------------------
 # Logging function
 # -------------------------------
 log() {
@@ -15,22 +29,10 @@ log() {
     local msg="${*}"
     local timestamp
     timestamp="$(date '+%F %T')"
-    echo "[${timestamp}] [${level}] ${msg}"
+    local line="[${timestamp}] [${level}] ${msg}"
+    # Output to stdout and append to log file
+    echo "$line" | tee -a "$LOGFILE"
 }
-
-# -------------------------------
-# Configuration
-# -------------------------------
-BORG_SERVER_FILE="/root/.borg_server"
-BORG_KEYFILE="/root/.borg_keyfile"
-BORG_KEY="/root/.ssh/borg_ssh_key"
-SNAPSHOT_DIR_ROOT="/.snapshots"
-LOCK_FILE_DIR="/etc/faborg"
-LOCK_FILE="/etc/faborg/faborg.lock"
-LOGFILE="/var/log/faborg.log"
-DATE="$(date +%F)"
-TIMESTAMP="$(date +%F-%H%M%S)"
-HOSTNAME_SHORT="$(hostname -s)"
 
 # -------------------------------
 # Validate and parse .borg_server
