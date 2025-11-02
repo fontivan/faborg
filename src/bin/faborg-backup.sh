@@ -147,8 +147,26 @@ initialize_repo() {
 perform_backup() {
     local root_snap="$1"
     local home_snap="$2"
+    local archive_name="${HOSTNAME_SHORT}-${DATE}"
 
     log INFO "Starting Borg backup..."
+
+    # Check if full archive already exists
+    if borg list "$REMOTE" --short | grep -q "^${archive_name}\$"; then
+        log INFO "Archive ${archive_name} already exists — skipping upload for today."
+        return 0
+    fi
+
+    # Check if a checkpoint (incomplete upload) exists
+    if borg list "$REMOTE" --short --consider-checkpoints | grep -q "^${archive_name}"; then
+        log WARNING "Checkpoint archive found for ${archive_name}. Resuming interrupted upload..."
+        resume_flag="--consider-checkpoints"
+    else
+        resume_flag=""
+        log INFO "No previous checkpoint found — starting new upload."
+    fi
+
+    # Run the backup (resume if checkpoint exists)
     borg create \
         --verbose \
         --stats \
@@ -156,7 +174,9 @@ perform_backup() {
         --filter AME \
         --show-rc \
         --exclude-caches \
-        "${REMOTE}::${HOSTNAME_SHORT}-${DATE}" \
+        --checkpoint-interval 1800 \
+        $resume_flag \
+        "${REMOTE}::${archive_name}" \
         "$root_snap" "$home_snap" \
         --exclude /proc \
         --exclude /sys \
@@ -165,7 +185,15 @@ perform_backup() {
         --exclude /tmp \
         --exclude /mnt | tee -a "$LOGFILE"
 
-    return ${PIPESTATUS[0]}
+    local rc=${PIPESTATUS[0]}
+
+    if [[ $rc -eq 0 ]]; then
+        log INFO "Borg backup completed successfully."
+    else
+        log ERROR "Borg backup failed with exit code $rc."
+    fi
+
+    return $rc
 }
 
 prune_archives() {
