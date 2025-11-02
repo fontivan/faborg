@@ -46,7 +46,7 @@ validate_remote_config() {
     REMOTE_USER="${BASH_REMATCH[1]}"
     BACKUP_HOST="${BASH_REMATCH[2]}"
     BACKUP_PORT="${BASH_REMATCH[3]}"
-    REMOTE="${REMOTE_USER}@${BACKUP_HOST}:/backup/${HOSTNAME_SHORT}"
+    REMOTE="ssh://${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}/backup/${HOSTNAME_SHORT}"
     log INFO "Remote configuration validated: ${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
 }
 
@@ -65,7 +65,18 @@ prepare_borg_environment() {
 get_btrfs_device() { findmnt -no SOURCE --target "$1"; }
 ensure_dir() { local dir="$1"; mkdir -p "$dir"; chown root:root "$dir"; chmod 700 "$dir"; }
 create_snapshot() { local s="$1"; local d="$2"; [[ ! -d "$d" ]] && btrfs subvolume snapshot -r "$s" "$d"; }
-initialize_repo() { borg info "$REMOTE" >/dev/null 2>&1 || borg init --encryption=repokey-blake2 "$REMOTE"; }
+
+initialize_repo() {
+    log "Checking if Borg repository exists..."
+    if borg info "$REMOTE" >/dev/null 2>&1; then
+        log "Repository already exists, skipping initialization."
+    else
+        log "Repository not found, initializing..."
+        borg init --encryption=repokey-blake2 "$REMOTE"
+        log "Repository initialized."
+    fi
+}
+
 perform_backup() {
     local root_snap="$1"; local home_snap="$2"
     borg create --verbose --stats --compression zstd --filter AME --show-rc --exclude-caches \
