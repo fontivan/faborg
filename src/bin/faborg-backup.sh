@@ -24,6 +24,8 @@ BORG_SERVER_FILE="/root/.borg_server"
 BORG_KEYFILE="/root/.borg_keyfile"
 BORG_KEY="/root/.ssh/borg_ssh_key"
 SNAPSHOT_DIR_ROOT="/.snapshots"
+LOCK_FILE_DIR="/etc/faborg"
+LOCK_FILE="/etc/faborg/faborg.lock"
 LOGFILE="/var/log/faborg.log"
 DATE="$(date +%F)"
 TIMESTAMP="$(date +%F-%H%M%S)"
@@ -60,6 +62,37 @@ prepare_borg_environment() {
 }
 
 # -------------------------------
+# Lock functions
+# -------------------------------
+check_lock() {
+    if [[ -f "$LOCK_FILE" ]]; then
+        local pid
+        pid=$(cat "$LOCK_FILE")
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            log ERROR "Another backup process is already running (PID $pid). Exiting."
+            exit 1
+        else
+            log WARNING "Stale lock file found. Removing..."
+            rm -f "$LOCK_FILE"
+        fi
+    fi
+}
+
+lock() {
+    ensure_dir "$LOCK_FILE_DIR"
+    check_lock
+    echo $$ > "$LOCK_FILE"
+    log INFO "Lock acquired (PID $$)"
+}
+
+unlock() {
+    if [[ -f "$LOCK_FILE" ]] && [[ "$(cat "$LOCK_FILE")" == "$$" ]]; then
+        rm -f "$LOCK_FILE"
+        log INFO "Lock released (PID $$)"
+    fi
+}
+
+# -------------------------------
 # Helper functions
 # -------------------------------
 get_btrfs_device() { findmnt -no SOURCE --target "$1"; }
@@ -93,6 +126,10 @@ delete_snapshots() { local r="$1"; local h="$2"; btrfs subvolume delete "$r" || 
 main() {
     if [[ "$(id -u)" -ne 0 ]]; then log ERROR "Must be run as root"; exit 1; fi
     log INFO "===== Borg Backup Started ====="
+
+    lock  # Acquire lock at the very start
+    trap unlock EXIT  # Ensure lock is released on script exit
+
     validate_remote_config
     prepare_borg_environment
     initialize_repo
@@ -114,6 +151,7 @@ main() {
     RC=$?
     prune_archives
     if [[ $RC -eq 0 ]]; then delete_snapshots "$ROOT_SNAP" "$HOME_SNAP"; fi
+
     log INFO "===== Borg Backup Finished ====="
     exit $RC
 }
