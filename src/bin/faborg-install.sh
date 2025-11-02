@@ -11,11 +11,11 @@ set -euo pipefail
 # -------------------------------
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+ROOT_SSH_DIR="/root/.ssh"
 BORG_KEY="${ROOT_SSH_DIR}/borg_ssh_key"
 BORG_KEYFILE="/root/.borg_keyfile"
 BORG_SERVER_FILE="/root/.borg_server"
 LOGFILE="/var/log/faborg.log"
-ROOT_SSH_DIR="/root/.ssh"
 
 # -------------------------------
 # Logging function
