@@ -28,7 +28,7 @@ log() {
     timestamp="$(date '+%F %T')"
     local line="[${timestamp}] [${level}] ${msg}"
     # Output to stdout and append to log file
-    echo "$line" | tee -a "$LOGFILE"
+    echo "$line" | sudo tee -a "$LOGFILE"
 }
 
 # -------------------------------
