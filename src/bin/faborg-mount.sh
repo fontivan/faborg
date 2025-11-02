@@ -11,6 +11,7 @@ set -euo pipefail
 # -------------------------------
 BORG_KEYFILE="/root/.borg_keyfile"
 BORG_SERVER_FILE="/root/.borg_server"
+LOGFILE="/var/log/faborg.log"
 MOUNT_POINT="/mnt/borg"
 SSH_KEY="/root/.ssh/borg_ssh_key"
 
