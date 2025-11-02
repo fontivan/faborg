@@ -98,15 +98,15 @@ main() {
     initialize_repo
     ensure_dir "$SNAPSHOT_DIR_ROOT"
 
-    ROOT_SNAP="${SNAPSHOT_DIR_ROOT}/root-${DATE}"; create_snapshot / "$ROOT_SNAP"
+    ROOT_SNAP="${SNAPSHOT_DIR_ROOT}/root-${TIMESTAMP}"; create_snapshot / "$ROOT_SNAP"
 
     ROOT_DEV=$(get_btrfs_device /)
     HOME_DEV=$(get_btrfs_device /home)
     if [[ "$ROOT_DEV" != "$HOME_DEV" ]]; then
         SNAPSHOT_DIR_HOME="/home/.snapshots"; ensure_dir "$SNAPSHOT_DIR_HOME"
-        HOME_SNAP="${SNAPSHOT_DIR_HOME}/home-${DATE}"; create_snapshot /home "$HOME_SNAP"
+        HOME_SNAP="${SNAPSHOT_DIR_HOME}/home-${TIMESTAMP}"; create_snapshot /home "$HOME_SNAP"
     else
-        HOME_SNAP="${SNAPSHOT_DIR_ROOT}/home-${DATE}"
+        HOME_SNAP="${SNAPSHOT_DIR_ROOT}/home-${TIMESTAMP}"
         if btrfs subvolume show /home &>/dev/null; then create_snapshot /home "$HOME_SNAP"; else HOME_SNAP="$ROOT_SNAP"; fi
     fi
 
