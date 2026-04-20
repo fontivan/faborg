@@ -60,6 +60,10 @@ The script will:
 
 4. Copy the generated public key to your Borg server's sshkeys folder and save is using the system's hostname as the file name
 
+### Subvolume Configuration
+
+This script assumes that `/` and `/home` are separate subvolumes, and that their snapshots are additionally stored in separate subvolumes `/@root_snapshots` and `/home/@home_snapshots` respectively.
+
 ### Backup Execution
 
 The backup script must be run as root:
@@ -68,7 +72,7 @@ sudo /usr/local/bin/faborg-backup.sh
 ```
 
 The script handles:
-- Create Btrfs snapshots for / and /home (if separate)
+- Create Btrfs snapshots for / and /home
 - Push the snapshots to the Borg repository
 - Prune old archives based on daily/weekly/monthly retention
 - Delete local snapshots after a successful backup

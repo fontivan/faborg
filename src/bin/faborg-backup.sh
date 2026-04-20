@@ -17,7 +17,10 @@ HOSTNAME_SHORT="$(hostname -s)"
 LOCK_FILE_DIR="/etc/faborg"
 LOCK_FILE="/etc/faborg/faborg.lock"
 LOGFILE="/var/log/faborg.log"
-SNAPSHOT_DIR_ROOT="/.snapshots"
+ROOT_SUBVOLUME_MOUNT="/"
+SNAPSHOT_SUBVOLUME_ROOT="${ROOT_SUBVOLUME_MOUNT}@root_snapshots"
+HOME_SUBVOLUME_MOUNT="/home"
+SNAPSHOT_SUBVOLUME_HOME="${HOME_SUBVOLUME_MOUNT}/@home_snapshots"
 TIMESTAMP="$(date +%F-%H%M%S)"
 
 # -------------------------------
@@ -107,10 +110,6 @@ unlock() {
 # -------------------------------
 # Btrfs helper functions
 # -------------------------------
-get_btrfs_device() {
-    local target="$1"
-    findmnt -no SOURCE --target "$target"
-}
 
 ensure_dir() {
     local dir="$1"
@@ -183,7 +182,10 @@ perform_backup() {
         --exclude /dev \
         --exclude /run \
         --exclude /tmp \
-        --exclude /mnt | tee -a "$LOGFILE"
+        --exclude /mnt \
+        --exclude ${SNAPSHOT_SUBVOLUME_ROOT} \
+        --exclude ${SNAPSHOT_SUBVOLUME_HOME} \
+        | tee -a "$LOGFILE"
 
     local rc=${PIPESTATUS[0]}
 
@@ -207,9 +209,7 @@ delete_snapshots() {
 
     log INFO "Deleting local snapshots..."
     btrfs subvolume delete "$root_snap" || true
-    if [[ "$home_snap" != "$root_snap" ]]; then
-        btrfs subvolume delete "$home_snap" || true
-    fi
+    btrfs subvolume delete "$home_snap" || true
 }
 
 # -------------------------------
@@ -229,27 +229,14 @@ main() {
     validate_remote_config
     prepare_borg_environment
     initialize_repo
-    ensure_dir "$SNAPSHOT_DIR_ROOT"
 
-    ROOT_SNAP="${SNAPSHOT_DIR_ROOT}/root-${DATE}"
-    create_snapshot / "$ROOT_SNAP"
+    # Check that the rootsnapshot directory exists, and then create a snapshot with it
+    ROOT_SNAP="${SNAPSHOT_SUBVOLUME_ROOT}/root-${DATE}"
+    create_snapshot "/" "${ROOT_SNAP}"
 
-    ROOT_DEV=$(get_btrfs_device /)
-    HOME_DEV=$(get_btrfs_device /home)
-
-    if [[ "$ROOT_DEV" != "$HOME_DEV" ]]; then
-        SNAPSHOT_DIR_HOME="/home/.snapshots"
-        ensure_dir "$SNAPSHOT_DIR_HOME"
-        HOME_SNAP="${SNAPSHOT_DIR_HOME}/home-${DATE}"
-        create_snapshot /home "$HOME_SNAP"
-    else
-        HOME_SNAP="${SNAPSHOT_DIR_ROOT}/home-${DATE}"
-        if btrfs subvolume show /home &>/dev/null; then
-            create_snapshot /home "$HOME_SNAP"
-        else
-            HOME_SNAP="$ROOT_SNAP"
-        fi
-    fi
+    # Check that the home snapshot directory exists, and then create a snapshot with it
+    HOME_SNAP="${SNAPSHOT_SUBVOLUME_HOME}/home-${DATE}"
+    create_snapshot "/home" "${HOME_SNAP}"
 
     perform_backup "$ROOT_SNAP" "$HOME_SNAP"
     RC=$?
