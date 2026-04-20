@@ -21,7 +21,6 @@ ROOT_SUBVOLUME_MOUNT="/"
 SNAPSHOT_SUBVOLUME_ROOT="${ROOT_SUBVOLUME_MOUNT}@root_snapshots"
 HOME_SUBVOLUME_MOUNT="/home"
 SNAPSHOT_SUBVOLUME_HOME="${HOME_SUBVOLUME_MOUNT}/@home_snapshots"
-TIMESTAMP="$(date +%F-%H%M%S)"
 
 # -------------------------------
 # Logging function
@@ -49,17 +48,21 @@ validate_remote_config() {
     local remote_line
     remote_line="$(< "${BORG_SERVER_FILE}")"
 
-    if ! [[ "${remote_line}" =~ ^([^@]+)@([^:]+):([0-9]+)$ ]]; then
-        log ERROR "Invalid format in ${BORG_SERVER_FILE}. Expected user@hostname:port"
+    local regex='^([^@]+)@([^:]+):([0-9]+)$'
+    if ! [[ "${remote_line}" =~ $regex ]]; then
+        log ERROR "Invalid format in ${BORG_SERVER_FILE}." \
+            "Expected user@hostname:port"
         exit 1
     fi
 
     REMOTE_USER="${BASH_REMATCH[1]}"
     BACKUP_HOST="${BASH_REMATCH[2]}"
     BACKUP_PORT="${BASH_REMATCH[3]}"
-    REMOTE="ssh://${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}/backup/${HOSTNAME_SHORT}"
+    local base_remote="ssh://${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
+    REMOTE="${base_remote}/backup/${HOSTNAME_SHORT}"
 
-    log INFO "Remote configuration validated: ${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
+    log INFO "Remote configuration validated:" \
+        "${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
 }
 
 # -------------------------------
@@ -71,8 +74,11 @@ prepare_borg_environment() {
         exit 1
     fi
 
-    export BORG_RSH="ssh -i ${BORG_KEY} -p ${BACKUP_PORT} -o StrictHostKeyChecking=no"
-    export BORG_PASSPHRASE="$(< "${BORG_KEYFILE}")"
+    local ssh_cmd="ssh -i ${BORG_KEY} -p ${BACKUP_PORT} \
+        -o StrictHostKeyChecking=no"
+    export BORG_RSH="$ssh_cmd"
+    BORG_PASSPHRASE="$(< "${BORG_KEYFILE}")"
+    export BORG_PASSPHRASE
     log INFO "Borg environment prepared"
 }
 
@@ -84,7 +90,8 @@ check_lock() {
         local pid
         pid=$(< "$LOCK_FILE")
         if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            log ERROR "Another backup process is already running (PID $pid). Exiting."
+            log ERROR "Another backup process is already running (PID $pid)." \
+                "Exiting."
             exit 1
         else
             log WARNING "Stale lock file found. Removing..."
@@ -100,6 +107,7 @@ lock() {
     log INFO "Lock acquired (PID $$)"
 }
 
+# shellcheck disable=SC2329
 unlock() {
     if [[ -f "$LOCK_FILE" ]] && [[ "$(cat "$LOCK_FILE")" == "$$" ]]; then
         rm -f "$LOCK_FILE"
@@ -151,14 +159,18 @@ perform_backup() {
     log INFO "Starting Borg backup..."
 
     # Check if full archive already exists
-    if borg list "$REMOTE" --short | grep -q "^${archive_name}\$"; then
-        log INFO "Archive ${archive_name} already exists — skipping upload for today."
+    if borg list "$REMOTE" --short \
+        | grep -q "^${archive_name}\$"; then
+        log INFO "Archive ${archive_name} already exists" \
+            " — skipping upload for today."
         return 0
     fi
 
     # Check if a checkpoint (incomplete upload) exists
-    if borg list "$REMOTE" --short --consider-checkpoints | grep -q "^${archive_name}"; then
-        log WARNING "Checkpoint archive found for ${archive_name}. Resuming interrupted upload..."
+    if borg list "$REMOTE" --short --consider-checkpoints \
+        | grep -q "^${archive_name}"; then
+        log WARNING "Checkpoint archive found for ${archive_name}." \
+            "Resuming interrupted upload..."
         resume_flag="--consider-checkpoints"
     else
         resume_flag=""
@@ -195,12 +207,14 @@ perform_backup() {
         log ERROR "Borg backup failed with exit code $rc."
     fi
 
-    return $rc
+    return "$rc"
 }
 
 prune_archives() {
     log INFO "Pruning old Borg archives..."
-    borg prune -v --list "$REMOTE" --keep-daily=7 --keep-weekly=4 --keep-monthly=6 | tee -a "$LOGFILE"
+    borg prune -v --list "$REMOTE" \
+        --keep-daily=7 --keep-weekly=4 --keep-monthly=6 \
+        | tee -a "$LOGFILE"
 }
 
 delete_snapshots() {

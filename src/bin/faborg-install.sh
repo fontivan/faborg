@@ -35,19 +35,25 @@ log() {
 # Validate and parse .borg_server
 # -------------------------------
 validate_remote_config() {
-    if ! remote_line=$(sudo cat "${BORG_SERVER_FILE}" 2>/dev/null); then
-        log ERROR "Cannot read ${BORG_SERVER_FILE} — make sure it exists and is readable via sudo"
+    local borg_server_file="${BORG_SERVER_FILE}"
+    if ! remote_line=$(sudo cat "$borg_server_file" 2>/dev/null); then
+        log ERROR "Cannot read ${BORG_SERVER_FILE}" \
+            " — make sure it exists and is readable via sudo"
         exit 1
     fi
-    if ! [[ "${remote_line}" =~ ^([^@]+)@([^:]+):([0-9]+)$ ]]; then
-        log ERROR "Invalid format in ${BORG_SERVER_FILE}. Expected user@hostname:port"
+    local regex
+
+    regex='^([^@]+)@([^:]+):([0-9]+)$'
+    if ! [[ "${remote_line}" =~ $regex ]]; then
+        log ERROR "Invalid format in ${BORG_SERVER_FILE}." \
+            "Expected user@hostname:port"
         exit 1
     fi
     REMOTE_USER="${BASH_REMATCH[1]}"
     BACKUP_HOST="${BASH_REMATCH[2]}"
     BACKUP_PORT="${BASH_REMATCH[3]}"
-    REMOTE="${REMOTE_USER}@${BACKUP_HOST}"
-    log INFO "Remote configuration validated: ${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
+    log INFO "Remote configuration validated:" \
+        "${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
 }
 
 # -------------------------------
@@ -73,9 +79,11 @@ configure_root_keys() {
     fi
 
     if ! sudo test -f "${BORG_KEYFILE}"; then
-        if [[ -f "${SCRIPT_DIR}/../etc/faborg/.borg_keyfile" ]]; then
+        local source_keyfile="${SCRIPT_DIR}/../etc/faborg/.borg_keyfile"
+        if [[ -f "$source_keyfile" ]]; then
             log INFO "Installing Borg passphrase keyfile..."
-            sudo cp "${SCRIPT_DIR}/../etc/faborg/.borg_keyfile" "${BORG_KEYFILE}"
+            sudo cp "$source_keyfile" \
+                "${BORG_KEYFILE}"
             sudo chmod 600 "${BORG_KEYFILE}"
             sudo chown root:root "${BORG_KEYFILE}"
         else
@@ -83,7 +91,8 @@ configure_root_keys() {
             exit 1
         fi
     else
-        log INFO "Borg passphrase keyfile already exists; using existing keyfile."
+        log INFO "Borg passphrase keyfile already exists;" \
+            " using existing keyfile."
     fi
 }
 
@@ -92,16 +101,22 @@ configure_root_keys() {
 # -------------------------------
 install_local_script() {
     log INFO "Installing local backup script..."
-    sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-backup.sh" /usr/local/bin/faborg-backup.sh
-    sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-mount.sh" /usr/local/bin/faborg-mount.sh
-    sudo install -o root -g root -m 700 "${SCRIPT_DIR}/faborg-halt.sh" /usr/local/bin/faborg-halt.sh
+    sudo install -o root -g root -m 700 \
+        "${SCRIPT_DIR}/faborg-backup.sh" /usr/local/bin/faborg-backup.sh
+    sudo install -o root -g root -m 700 \
+        "${SCRIPT_DIR}/faborg-mount.sh" /usr/local/bin/faborg-mount.sh
+    sudo install -o root -g root -m 700 \
+        "${SCRIPT_DIR}/faborg-halt.sh" /usr/local/bin/faborg-halt.sh
 }
 
 install_systemd() {
     log INFO "Installing systemd service and timer..."
-    sudo cp "${SCRIPT_DIR}/../etc/faborg.service" /etc/systemd/system/
-    sudo cp "${SCRIPT_DIR}/../etc/faborg.timer" /etc/systemd/system/
-    sudo cp "${SCRIPT_DIR}/../etc/logrotate.conf" /etc/logrotate.d/faborg
+    sudo cp "${SCRIPT_DIR}/../etc/faborg.service" \
+        /etc/systemd/system/
+    sudo cp "${SCRIPT_DIR}/../etc/faborg.timer" \
+        /etc/systemd/system/
+    sudo cp "${SCRIPT_DIR}/../etc/logrotate.conf" \
+        /etc/logrotate.d/faborg
     sudo systemctl daemon-reload
     sudo systemctl enable --now faborg.timer
     sudo systemctl status faborg.timer --no-pager || true

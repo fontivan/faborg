@@ -37,17 +37,24 @@ validate_remote_config() {
         log ERROR "Missing Borg server configuration file: ${BORG_SERVER_FILE}"
         exit 1
     fi
+    local borg_server_file="${BORG_SERVER_FILE}"
     local remote_line
-    remote_line="$(cat "${BORG_SERVER_FILE}")"
-    if ! [[ "${remote_line}" =~ ^([^@]+)@([^:]+):([0-9]+)$ ]]; then
-        log ERROR "Invalid format in ${BORG_SERVER_FILE}. Expected user@hostname:port"
+    remote_line="$(cat "$borg_server_file")"
+    local regex
+
+    regex='^([^@]+)@([^:]+):([0-9]+)$'
+    if ! [[ "${remote_line}" =~ $regex ]]; then
+        log ERROR "Invalid format in ${BORG_SERVER_FILE}." \
+            "Expected user@hostname:port"
         exit 1
     fi
     REMOTE_USER="${BASH_REMATCH[1]}"
     BACKUP_HOST="${BASH_REMATCH[2]}"
     BACKUP_PORT="${BASH_REMATCH[3]}"
-    REMOTE="ssh://${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}/backup/$(hostname)"
-    log INFO "Remote configuration validated: ${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
+    local base_remote="ssh://${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
+    REMOTE="${base_remote}/backup/$(hostname)"
+    log INFO "Remote configuration validated:" \
+        "${REMOTE_USER}@${BACKUP_HOST}:${BACKUP_PORT}"
 }
 
 # -------------------------------
@@ -77,8 +84,10 @@ main() {
         log ERROR "Missing Borg keyfile: ${BORG_KEYFILE}"
         exit 1
     fi
-    export BORG_RSH="ssh -i ${SSH_KEY} -p ${BACKUP_PORT} -o StrictHostKeyChecking=no"
-    export BORG_PASSPHRASE="$(cat "${BORG_KEYFILE}")"
+    export BORG_RSH="ssh -i ${SSH_KEY} -p ${BACKUP_PORT} \
+        -o StrictHostKeyChecking=no"
+    BORG_PASSPHRASE="$(cat "${BORG_KEYFILE}")"
+    export BORG_PASSPHRASE
 
     if ! command -v borg >/dev/null 2>&1; then
         log ERROR "borg not installed"

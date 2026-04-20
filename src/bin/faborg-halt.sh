@@ -26,9 +26,9 @@ log() {
 main() {
     log INFO "===== Borg Halt Started ====="
     if sudo test -f "${LOCK_FILE}"; then
-        LOCK_PID="$(sudo cat ${LOCK_FILE})"
+        LOCK_PID="$(sudo cat "${LOCK_FILE}")"
         log INFO "Halting in progress process '${LOCK_PID}'"
-        sudo kill ${LOCK_PID}
+        sudo kill "${LOCK_PID}"
     else
         log INFO "No in progress backup detected"
     fi
